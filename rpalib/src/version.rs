@@ -66,7 +66,9 @@ impl RpaVersion {
         match self {
             RpaVersion::V3_0 => Ok(34),
             RpaVersion::V2_0 => Ok(25),
-            RpaVersion::V3_2 | RpaVersion::V1_0 => Err(RpaError::WritingNotSupported(self.clone())),
+            RpaVersion::V3_2 | RpaVersion::V1_0 => {
+                Err(RpaError::WritingNotSupported(self.clone()))
+            }
         }
     }
 }

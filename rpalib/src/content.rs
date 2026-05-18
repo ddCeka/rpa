@@ -66,11 +66,19 @@ impl ContentMap {
     /// in filesystem.
     ///
     /// The data is not written into the archive until `flush` is called.
-    pub fn insert_file_mapped<P>(&mut self, archive_path: P, file_path: P) -> Option<Content>
+    pub fn insert_file_mapped<P>(
+        &mut self,
+        archive_path: P,
+        file_path: P,
+    ) -> Option<Content>
     where
         P: Into<PathBuf>,
     {
-        fn inner(map: &mut ContentMap, key: PathBuf, value: PathBuf) -> Option<Content> {
+        fn inner(
+            map: &mut ContentMap,
+            key: PathBuf,
+            value: PathBuf,
+        ) -> Option<Content> {
             map.0.insert(key, Content::File(value))
         }
         inner(self, archive_path.into(), file_path.into())
@@ -83,7 +91,11 @@ impl ContentMap {
     where
         P: Into<PathBuf>,
     {
-        fn inner(map: &mut ContentMap, path: PathBuf, bytes: Vec<u8>) -> Option<Content> {
+        fn inner(
+            map: &mut ContentMap,
+            path: PathBuf,
+            bytes: Vec<u8>,
+        ) -> Option<Content> {
             map.0.insert(path, Content::Raw(bytes))
         }
         inner(self, path.into(), bytes)
@@ -117,7 +129,11 @@ impl ContentMap {
     /// let file1 = map.get(Path::new("file1.txt"));
     /// assert_eq!(file1, None);
     /// ```
-    pub fn rename_key<O, N>(&mut self, old_path: O, new_path: N) -> RpaResult<Option<Content>>
+    pub fn rename_key<O, N>(
+        &mut self,
+        old_path: O,
+        new_path: N,
+    ) -> RpaResult<Option<Content>>
     where
         O: AsRef<Path>,
         N: Into<PathBuf>,
@@ -173,7 +189,11 @@ impl Content {
     ///
     /// assert_eq!(bytes, buffer);
     /// ```
-    pub fn copy_to<R, W>(&self, reader: &mut R, writer: &mut W) -> io::Result<u64>
+    pub fn copy_to<R, W>(
+        &self,
+        reader: &mut R,
+        writer: &mut W,
+    ) -> io::Result<u64>
     where
         R: Seek + Read,
         W: Write,

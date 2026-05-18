@@ -44,13 +44,15 @@ pub fn filter_content<'a>(
                 .into_iter()
                 .filter(|(path, _)| pattern.matches_path(path)),
         ),
-        (f, Some(pattern)) => Box::new(
-            content
-                .into_iter()
-                .filter(|(path, _)| pattern.matches_path(path) || f.contains(path)),
-        ),
+        (f, Some(pattern)) => {
+            Box::new(content.into_iter().filter(|(path, _)| {
+                pattern.matches_path(path) || f.contains(path)
+            }))
+        }
         (f, None) if f.is_empty() => Box::new(content.into_iter()),
-        (f, None) => Box::new(content.into_iter().filter(|(path, _)| f.contains(path))),
+        (f, None) => {
+            Box::new(content.into_iter().filter(|(path, _)| f.contains(path)))
+        }
     }
 }
 
@@ -66,14 +68,20 @@ pub fn extract_archive<'a, R: Seek + Read>(
     Ok(())
 }
 
-pub fn extract_archive_threaded<'p, P>(reader: Mmap, content: P, out_dir: &Path) -> RpaResult<()>
+pub fn extract_archive_threaded<'p, P>(
+    reader: Mmap,
+    content: P,
+    out_dir: &Path,
+) -> RpaResult<()>
 where
     P: ParallelIterator<Item = (&'p PathBuf, &'p Content)>,
 {
     content
         .map_init(
             || Cursor::new(&reader),
-            |reader, (output, content)| extract_content(reader, output, content, out_dir),
+            |reader, (output, content)| {
+                extract_content(reader, output, content, out_dir)
+            },
         )
         .collect::<RpaResult<()>>()
 }

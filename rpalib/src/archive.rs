@@ -9,7 +9,10 @@ use flate2::{read::ZlibDecoder, write::ZlibEncoder, Compression};
 use log::{debug, trace};
 use serde_pickle::{DeOptions, HashableValue, SerOptions, Value};
 
-use crate::{record::Record, version::RpaVersion, Content, ContentMap, RpaError, RpaResult};
+use crate::{
+    record::Record, version::RpaVersion, Content, ContentMap, RpaError,
+    RpaResult,
+};
 
 /// Represents a renpy archive.
 ///
@@ -125,11 +128,15 @@ where
     pub fn version(reader: &mut R, file_name: &str) -> RpaResult<RpaVersion> {
         let mut version = String::new();
         reader.by_ref().take(7).read_to_string(&mut version)?;
-        RpaVersion::identify(file_name, &version).ok_or(RpaError::IdentifyVersion)
+        RpaVersion::identify(file_name, &version)
+            .ok_or(RpaError::IdentifyVersion)
     }
 
     /// Retrieve `offset`, `key`, and content indexes from the archive
-    pub fn metadata(reader: &mut R, version: &RpaVersion) -> RpaResult<MetaData> {
+    pub fn metadata(
+        reader: &mut R,
+        version: &RpaVersion,
+    ) -> RpaResult<MetaData> {
         trace!("Parsing metadata from archive version ({version})");
 
         let mut first_line = String::new();
@@ -141,20 +148,23 @@ where
             .split(' ')
             .collect::<Vec<_>>();
 
-        let offset = u64::from_str_radix(metadata[1], 16).map_err(|_| RpaError::ParseOffset)?;
+        let offset = u64::from_str_radix(metadata[1], 16)
+            .map_err(|_| RpaError::ParseOffset)?;
 
         let key = match version {
             RpaVersion::V3_0 => {
                 let mut key = 0;
                 for subkey in &metadata[2..] {
-                    key ^= u64::from_str_radix(subkey, 16).map_err(|_| RpaError::ParseKey)?;
+                    key ^= u64::from_str_radix(subkey, 16)
+                        .map_err(|_| RpaError::ParseKey)?;
                 }
                 Some(key)
             }
             RpaVersion::V3_2 => {
                 let mut key = 0;
                 for subkey in &metadata[3..] {
-                    key ^= u64::from_str_radix(subkey, 16).map_err(|_| RpaError::ParseKey)?;
+                    key ^= u64::from_str_radix(subkey, 16)
+                        .map_err(|_| RpaError::ParseKey)?;
                 }
                 Some(key)
             }
@@ -178,8 +188,9 @@ where
 
         // Deserialize indexes using pickle.
         let options = DeOptions::default();
-        let raw_indexes: HashMap<String, Value> = serde_pickle::from_slice(&contents[..], options)
-            .map_err(|_| RpaError::DeserializeRecord)?;
+        let raw_indexes: HashMap<String, Value> =
+            serde_pickle::from_slice(&contents[..], options)
+                .map_err(|_| RpaError::DeserializeRecord)?;
         debug!("Deserialized index data using pickle");
 
         // Map indexes to an easier format.
@@ -204,7 +215,11 @@ where
     ///
     /// This function returns `NotFound` error if `path` is not present in
     /// the archive and any errors raised during the copy process.
-    pub fn copy_file<W: Write>(&mut self, path: &Path, writer: &mut W) -> RpaResult<u64> {
+    pub fn copy_file<W: Write>(
+        &mut self,
+        path: &Path,
+        writer: &mut W,
+    ) -> RpaResult<u64> {
         if let Some(content) = self.content.get(Path::new(path)) {
             return content
                 .copy_to(&mut self.reader, writer)
@@ -255,7 +270,9 @@ where
         for (path, content) in self.content.into_iter() {
             let length = content.copy_to(&mut self.reader, writer)?;
             let path = path.as_os_str().to_string_lossy().to_string();
-            debug!("Written content from path ({path}) length ({length} bytes)",);
+            debug!(
+                "Written content from path ({path}) length ({length} bytes)",
+            );
 
             indexes.insert(path, Record::new(offset, length, None, self.key));
             offset += length;
@@ -286,7 +303,8 @@ where
 
             // Compress serialized data with zlib.
             let mut input = Cursor::new(buffer);
-            let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());
+            let mut encoder =
+                ZlibEncoder::new(Vec::new(), Compression::default());
             io::copy(&mut input, &mut encoder)?;
             let compressed = encoder.finish()?;
             debug!("Compressed indexes using zlib: {} bytes", compressed.len());
@@ -303,7 +321,9 @@ where
 
         let key = self.key.unwrap_or(0);
         let header = match self.version {
-            RpaVersion::V3_0 => format!("RPA-3.0 {:016x} {:08x}\n", offset, key),
+            RpaVersion::V3_0 => {
+                format!("RPA-3.0 {:016x} {:08x}\n", offset, key)
+            }
             RpaVersion::V2_0 => format!("RPA-2.0 {:016x}\n", offset),
             v @ (RpaVersion::V3_2 | RpaVersion::V1_0) => {
                 return Err(RpaError::WritingNotSupported(v))

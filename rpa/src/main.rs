@@ -12,14 +12,16 @@ use std::{
 };
 
 use clap::{Parser, Subcommand};
-use extract::{extract_archive, extract_archive_threaded, filter_content, MemArchive};
+use extract::{
+    extract_archive, extract_archive_threaded, filter_content, MemArchive,
+};
 use glob::{glob, Pattern};
 use log::{debug, error, info, warn};
 use rayon::prelude::*;
+use rpalib::{Content, RenpyArchive, RpaError, RpaResult};
 use simplelog::{ColorChoice, Config, LevelFilter, TermLogger};
 use std::io;
 use types::{HexKey, MappedPath, WriteVersion};
-use rpalib::{Content, RenpyArchive, RpaError, RpaResult};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -212,7 +214,10 @@ fn run(args: Cli) -> Result<(), RpaError> {
                         .content
                         .insert_file_mapped(archive_path.clone(), file_path);
                     if removed.is_some() {
-                        warn!("Removed previous content in {}.", archive_path.display());
+                        warn!(
+                            "Removed previous content in {}.",
+                            archive_path.display()
+                        );
                     }
                 }
 
@@ -222,7 +227,10 @@ fn run(args: Cli) -> Result<(), RpaError> {
                         let file = file.expect("Failed glob iteration");
                         info!("Adding {}...", file.display());
                         if archive.content.insert_file(file.clone()).is_some() {
-                            warn!("Removed previous content in {}.", file.display());
+                            warn!(
+                                "Removed previous content in {}.",
+                                file.display()
+                            );
                         }
                     }
                 }
@@ -239,7 +247,10 @@ fn run(args: Cli) -> Result<(), RpaError> {
                     config.update_archive(&mut archive);
                     add_files(&path, files, pattern, archive, temp_path)
                 } else if path.exists() {
-                    io_error!("Expected an archive or empty path: {}", path.display())
+                    io_error!(
+                        "Expected an archive or empty path: {}",
+                        path.display()
+                    )
                 } else {
                     let mut archive = RenpyArchive::new();
                     config.update_archive(&mut archive);
@@ -284,9 +295,12 @@ fn run(args: Cli) -> Result<(), RpaError> {
                             )
                         } else {
                             // Filter and collect results so parallelization will be affective.
-                            let content =
-                                filter_content(mmap.archive.content, &files, pattern.as_ref())
-                                    .collect::<Vec<_>>();
+                            let content = filter_content(
+                                mmap.archive.content,
+                                &files,
+                                pattern.as_ref(),
+                            )
+                            .collect::<Vec<_>>();
 
                             extract_archive_threaded(
                                 mmap.archive.reader.into_inner(),
@@ -296,9 +310,16 @@ fn run(args: Cli) -> Result<(), RpaError> {
                         }
                     } else {
                         let mut archive = RenpyArchive::open(&path)?;
-                        let content_iter =
-                            filter_content(archive.content, &files, pattern.as_ref());
-                        extract_archive(&mut archive.reader, content_iter, out_dir)
+                        let content_iter = filter_content(
+                            archive.content,
+                            &files,
+                            pattern.as_ref(),
+                        );
+                        extract_archive(
+                            &mut archive.reader,
+                            content_iter,
+                            out_dir,
+                        )
                     }
                 })
                 .collect::<RpaResult<()>>()
@@ -324,7 +345,10 @@ fn run(args: Cli) -> Result<(), RpaError> {
             for file in files {
                 info!("Removing {}...", file.display());
                 if archive.content.remove(file.as_path()).is_none() {
-                    return io_error!("File {} not found in the archive.", file.display());
+                    return io_error!(
+                        "File {} not found in the archive.",
+                        file.display()
+                    );
                 }
             }
 
@@ -359,7 +383,11 @@ fn run(args: Cli) -> Result<(), RpaError> {
             let dir = match relative.as_ref() {
                 None => match archive_path.parent() {
                     Some(p) => p,
-                    None => return not_found!("unable to access archive directory."),
+                    None => {
+                        return not_found!(
+                            "unable to access archive directory."
+                        )
+                    }
                 },
                 Some(p) => {
                     if !p.exists() {
@@ -423,7 +451,10 @@ fn run(args: Cli) -> Result<(), RpaError> {
                         }
                         Some(_) => (),
                         None => {
-                            return io_error!("File not found in archive: '{}'", path.display())
+                            return io_error!(
+                                "File not found in archive: '{}'",
+                                path.display()
+                            )
                         }
                     }
                 }
@@ -476,7 +507,10 @@ where
 /// # Errors
 ///
 /// Throws an [`io::ErrorKind::NotFound`] if parent is not found.
-fn get_out_or_parent<'a>(out: Option<&'a PathBuf>, parent_of: &'a Path) -> io::Result<&'a Path> {
+fn get_out_or_parent<'a>(
+    out: Option<&'a PathBuf>,
+    parent_of: &'a Path,
+) -> io::Result<&'a Path> {
     match out {
         Some(out) => Ok(out),
         None => match parent_of.parent() {

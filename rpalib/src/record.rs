@@ -42,7 +42,12 @@ impl Record {
     ///
     /// Passing deobfuscated values with keys would obfuscate them. This is used
     /// when rebuilding the index for writing to a new archive.
-    pub fn new(start: u64, length: u64, prefix: Option<Vec<u8>>, key: Option<u64>) -> Self {
+    pub fn new(
+        start: u64,
+        length: u64,
+        prefix: Option<Vec<u8>>,
+        key: Option<u64>,
+    ) -> Self {
         let (start, length) = match key {
             Some(key) => (start ^ key, length ^ key),
             None => (start, length),
@@ -82,9 +87,11 @@ impl Record {
             (Some(Value::I64(start)), Some(Value::I64(length)), None) => {
                 Ok(Self::new(start as u64, length as u64, None, key))
             }
-            (Some(Value::I64(start)), Some(Value::I64(length)), Some(Value::Bytes(prefix))) => {
-                Ok(Self::new(start as u64, length as u64, Some(prefix), key))
-            }
+            (
+                Some(Value::I64(start)),
+                Some(Value::I64(length)),
+                Some(Value::Bytes(prefix)),
+            ) => Ok(Self::new(start as u64, length as u64, Some(prefix), key)),
             _ => Err(RpaError::FormatRecord),
         }
     }
